@@ -27,7 +27,7 @@ To interact with the layout generator you can use the provided
 command line switch:
 
     $ python main.py -h
-    usage: main.py [-h] [-t {horizontal_line,grid}] [-r RADIUS]
+    usage: main.py [-h] [-t {horizontal_line,grid,circle}] [-r RADIUS]
                    width height num_items
     
     Arrange circles of RADIUS in the selected layout.
@@ -39,7 +39,7 @@ command line switch:
     
     optional arguments:
       -h, --help            show this help message and exit
-      -t {horizontal_line,grid}, --layout-type {horizontal_line,grid}
+      -t {horizontal_line,grid,circle}, --layout-type {horizontal_line,grid,circle}
                             type of layout to generate. default: horizontal_line
       -r RADIUS, --radius RADIUS
                             radius of the items. default: 10px
@@ -62,6 +62,7 @@ Layout | Command | Output | Plot
 -------|---------|--------|-----
 Horizontal line | `python main.py -t grid 100 100 3` | `[(33, 33, 10), (33, 67, 10), (67, 33, 10)]` | ![grid layout](/examples/grid3.bmp)
 Grid | `python main.py -r 5 100 20 5` | `[(10, 9, 5), (30, 9, 5), (50, 9, 5), (70, 9, 5), (90, 9, 5)]` | ![horizontal line layout](/examples/hline5.bmp)
+Circle | `python main.py -r 4 -t circle 70 50 3` | `[(30, 36, 4), (29, 15, 4), (47, 25, 4)]` | ![circle layout](/examples/circle3.bmp)
 
 
 ## Running unit tests

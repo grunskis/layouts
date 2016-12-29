@@ -1,7 +1,7 @@
 from unittest import TestCase
 
 from ..primitives import Container, Circle
-from ..layouts import HorizontalLineLayout, GridLayout
+from ..layouts import HorizontalLineLayout, GridLayout, CircleLayout
 from ..errors import LayoutError
 
 
@@ -84,3 +84,37 @@ class GridLayoutTests(TestCase):
         with self.assertRaises(LayoutError):
             layout.add(Circle(radius=1))
 
+
+class CircleLayoutTests(TestCase):
+    def test_circle_radius(self):
+        l1 = CircleLayout(Container(width=20, height=10))
+        self.assertEquals(l1.circle_radius, 2)
+        l2 = CircleLayout(Container(width=40, height=60))
+        self.assertEquals(l2.circle_radius, 10)
+
+    def test_circle_center(self):
+        l1 = CircleLayout(Container(width=4, height=4))
+        self.assertEquals(l1.circle_center, (2, 2))
+        l2 = CircleLayout(Container(width=5, height=5))
+        self.assertEquals(l2.circle_center, (2, 2))
+
+    def test_item_coordinates(self):
+        tests = {
+            1: [(15, 10)],
+            2: [(5, 10), (15, 10)],
+            3: [(8, 15), (8, 6), (15, 10)],
+            4: [(10, 15), (5, 10), (10, 5), (15, 10)],
+        }
+        l = CircleLayout(Container(width=20, height=20))
+        for num_items, coords in tests.items():
+            self.assertEquals(l.item_coordinates(num_items), coords)
+
+    def test_add_items(self):
+        layout = CircleLayout(Container(width=9, height=9))
+        layout.add(Circle(radius=1))
+        layout.add(Circle(radius=1))
+
+        self.assertEquals(layout.as_tuples(), [(2, 4, 1), (6, 4, 1)])
+
+        with self.assertRaises(LayoutError):
+            layout.add(Circle(radius=1))

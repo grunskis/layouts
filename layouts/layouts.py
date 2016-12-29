@@ -1,4 +1,5 @@
 from itertools import combinations
+from math import pi, sin, cos, ceil
 
 from PIL import Image, ImageDraw
 
@@ -143,3 +144,71 @@ class GridLayout(BaseLayout):
                 raise LayoutError("item doesn't fit in the container")
 
             i += 1
+
+
+class CircleLayout(BaseLayout):
+    """
+    All items are placed regularly along a circle in the middle of the
+    container.
+    """
+    @property
+    def circle_radius(self):
+        """
+        Calculate radius of the circle where items will be placed on.
+
+        Make it to be 1/4 of the smallest container dimension.
+        """
+        return min([self.container.width, self.container.height]) / 4
+
+    @property
+    def circle_center(self):
+        """
+        Returns center coordinates of the circle where items will be
+        placed on.
+        """
+        return self.container.width / 2, self.container.height / 2
+
+    def item_coordinates(self, num_items):
+        """
+        Returns list of coordinates where items can be placed.
+        """
+        cx, cy = self.circle_center
+
+        angle = 2 * pi / num_items
+
+        coords = []
+        for i in range(1, num_items + 1):
+            x = cx + (self.circle_radius * cos(angle * i))
+            y = cy + (self.circle_radius * sin(angle * i))
+
+            coords.append((int(ceil(x)), int(ceil(y))))
+
+        return coords
+
+    def add(self, item):
+        """
+        Add a new item to the layout and re-arrange the layout.
+
+        Raise an error if items are overlapping or container is too
+        small.
+        """
+        self.items.append(item)
+        coords = self.item_coordinates(len(self.items))
+        self._arrange(coords)
+
+        if self.items_intersect():
+            raise LayoutError("overlapping items")
+
+    def _arrange(self, coords):
+        """
+        Arrange items in layout or raise error if it's not possible.
+        """
+        for i, item in enumerate(self.items):
+            px, py = coords[i]
+
+            item.x = px
+            item.y = py
+
+            # make sure item fits within the container bounds
+            if not self.container.within_bounds(item):
+                raise LayoutError("item doesn't fit in the container")
