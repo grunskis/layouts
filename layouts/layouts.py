@@ -7,6 +7,10 @@ from .errors import LayoutError
 
 
 class BaseLayout(object):
+    def __init__(self, container):
+        self.container = container
+        self.items = []
+
     def items_intersect(self):
         """
         Return True if any of the items intersect, otherwise False.
@@ -36,10 +40,6 @@ class HorizontalLineLayout(BaseLayout):
     """
     All items are aligned on a horizontal line, centered in the container.
     """
-    def __init__(self, container):
-        self.items = []
-        self.container = container
-
     @property
     def baseline(self):
         """
@@ -80,10 +80,6 @@ class GridLayout(BaseLayout):
     """
     All items are organized in a grid, all aligned vertically and horizontally.
     """
-    def __init__(self, container):
-        self.container = container
-        self.items = []
-
     def grid_intersections(self, num_items):
         """
         Returns list of coordinates where grid lines intersect in
