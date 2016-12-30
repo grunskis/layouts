@@ -2,7 +2,7 @@ from argparse import ArgumentParser
 
 import layouts
 
-from layouts import horizontal_line_layout, grid_layout, circle_layout
+from layouts import horizontal_line_layout, grid_layout, circle_layout, random_layout
 
 
 DEFAULT_RADIUS = 10  # px
@@ -11,6 +11,7 @@ LAYOUT_FUNCTION_MAP = {
     "horizontal_line": horizontal_line_layout,
     "grid": grid_layout,
     "circle": circle_layout,
+    "random": random_layout,
 }
 
 LAYOUT_TYPES = LAYOUT_FUNCTION_MAP.keys()

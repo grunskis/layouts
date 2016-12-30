@@ -1,3 +1,5 @@
+import random
+
 from itertools import combinations
 from math import pi, sin, cos, ceil
 
@@ -198,6 +200,97 @@ class CircleLayout(BaseLayout):
 
         if self.items_intersect():
             raise LayoutError("overlapping items")
+
+    def _arrange(self, coords):
+        """
+        Arrange items in layout or raise error if it's not possible.
+        """
+        for i, item in enumerate(self.items):
+            px, py = coords[i]
+
+            item.x = px
+            item.y = py
+
+            # make sure item fits within the container bounds
+            if not self.container.within_bounds(item):
+                raise LayoutError("item doesn't fit in the container")
+
+
+class RandomLayout(BaseLayout):
+    """
+    It looks like the items have been placed on the screen randomly.
+
+    All items have the same size.
+    """
+    def __init__(self, radius, *args, **kwargs):
+        super(RandomLayout, self).__init__(*args, **kwargs)
+
+        self.radius = radius
+
+        # seed random number generator with current system time
+        random.seed()
+
+    def add(self, item):
+        """
+        Add a new item to the layout and re-arrange the layout.
+
+        Raise an error if container is too small or it's not possible
+        to place all items within the contianer.
+        """
+        assert item.radius == self.radius, "item radius must be %d" % self.radius
+
+        # make sure there's enough space to fit all items
+        if self.container.capacity(Item.MIN_SIDE_SIZE) < len(self.items) + 1:
+            raise LayoutError("container too small to fit all items")
+
+        self.items.append(item)
+        coords = self.item_coordinates(len(self.items))
+        if len(coords) < len(self.items):
+            raise LayoutError("couldn't place all items in the container")
+
+        self._arrange(coords)
+
+    def item_coordinates(self, num_items):
+        center_coords = self.center_coords()
+
+        coords = []
+        for i in range(0, num_items):
+            if not center_coords:
+                break
+
+            point = random.choice(list(center_coords))
+            coords.append(point)
+
+            # remove selected coordinate and all points now taken by
+            # the item from the available coordinate set
+            self.center_coords_cleanup(center_coords, point)
+
+        return coords
+
+    def center_coords(self):
+        """
+        Return set of all possible center positions for circles.
+        """
+        coords = set()
+        for x in range(self.radius, self.container.width - self.radius):
+            for y in range(self.radius, self.container.height - self.radius):
+                coords.add((x, y))
+
+        return coords
+
+    def center_coords_cleanup(self, coords, point):
+        """
+        Removes all points taken by the item toghether will
+        surrounding points that are not eligable for placing a new
+        item from the available coordinate set.
+        """
+        px, py = point
+        for x in range(px - (self.radius * 2), px + (self.radius * 2) + 1):
+            for y in range(py - (self.radius * 2), py + (self.radius * 2) + 1):
+                if (x, y) in coords:
+                    coords.remove((x, y))
+
+        return coords
 
     def _arrange(self, coords):
         """
