@@ -14,6 +14,40 @@ class BaseLayout(object):
         self.container = container
         self.items = []
 
+    def add(self, item):
+        """
+        Add a new item to the layout and re-arrange the layout.
+
+        Raise an error if container is too small or it's not possible
+        to place all items within the contianer or items are
+        overlapping.
+        """
+        # make sure there's enough space to fit all items
+        if self.container.capacity(Item.MIN_SIDE_SIZE) < len(self.items) + 1:
+            raise LayoutError("container too small to fit all items")
+
+        self.items.append(item)
+        coords = self.item_coordinates(len(self.items))
+
+        self.arrange(coords)
+
+        if self.items_intersect():
+            raise LayoutError("overlapping items")
+
+    def arrange(self, coords):
+        """
+        Arrange items in layout or raise error if it's not possible.
+        """
+        for i, item in enumerate(self.items):
+            px, py = coords[i]
+
+            item.x = px
+            item.y = py
+
+            # make sure item fits within the container bounds
+            if not self.container.within_bounds(item):
+                raise LayoutError("item doesn't fit in the container")
+
     def items_intersect(self):
         """
         Return True if any of the items intersect, otherwise False.
@@ -52,38 +86,32 @@ class HorizontalLineLayout(BaseLayout):
             self._baseline = (self.container.height - 1) / 2
         return self._baseline
 
-    def add(self, item):
-        """
-        Add a new item to the layout and re-arrange the layout.
+    def item_coordinates(self, num_items):
+        coords = []
 
-        Raise an error if items are overlapping.
-        """
-        self.items.append(item)
-        self._arrange()
+        part_width = self.container.width / num_items
+        for i in range(0, num_items):
+            x = (i * part_width) + (part_width / 2)
+            y = self.baseline
 
-        if self.items_intersect():
-            raise LayoutError("overlapping items")
+            # there has to be at least 1px margin to the left and right of the point
+            if x + 1 >= self.container.width or x - 1 < 0:
+                # item would go out bounds of the container, skip this point...
+                continue
 
-    def _arrange(self):
-        """
-        Arrange items in layout or raise error if it's not possible.
-        """
-        part_width = self.container.width / len(self.items)
+            coords.append((x, y))
 
-        for i, item in enumerate(self.items):
-            item.x = (i * part_width) + (part_width / 2)
-            item.y = self.baseline
+        if len(coords) < num_items:
+            raise LayoutError("couldn't place all items in the container")
 
-            # make sure item fits within the container bounds
-            if not self.container.within_bounds(item):
-                raise LayoutError("item doesn't fit in the container")
+        return coords
 
 
 class GridLayout(BaseLayout):
     """
     All items are organized in a grid, all aligned vertically and horizontally.
     """
-    def grid_intersections(self, num_items):
+    def item_coordinates(self, num_items):
         """
         Returns list of coordinates where grid lines intersect in
         format [(x, y), ...]
@@ -112,40 +140,6 @@ class GridLayout(BaseLayout):
                 points.append((px, py))
 
         return points
-
-    def add(self, item):
-        """
-        Add a new item to the layout and re-arrange the layout.
-
-        Raise an error if items are overlapping or container is too
-        small.
-        """
-        self.items.append(item)
-
-        # make sure there's enough space to fit all items
-        if self.container.capacity(Item.MIN_SIDE_SIZE) < len(self.items):
-            raise LayoutError("container too small to fit all items")
-
-        points = self.grid_intersections(len(self.items))
-        self._arrange(points)
-
-        if self.items_intersect():
-            raise LayoutError("overlapping items")
-
-    def _arrange(self, points):
-        """
-        Arrange items in layout or raise error if it's not possible.
-        """
-        i = 0
-        for item in self.items:
-            item.x = points[i][0]
-            item.y = points[i][1]
-
-            # make sure item fits within the container bounds
-            if not self.container.within_bounds(item):
-                raise LayoutError("item doesn't fit in the container")
-
-            i += 1
 
 
 class CircleLayout(BaseLayout):
@@ -187,34 +181,6 @@ class CircleLayout(BaseLayout):
 
         return coords
 
-    def add(self, item):
-        """
-        Add a new item to the layout and re-arrange the layout.
-
-        Raise an error if items are overlapping or container is too
-        small.
-        """
-        self.items.append(item)
-        coords = self.item_coordinates(len(self.items))
-        self._arrange(coords)
-
-        if self.items_intersect():
-            raise LayoutError("overlapping items")
-
-    def _arrange(self, coords):
-        """
-        Arrange items in layout or raise error if it's not possible.
-        """
-        for i, item in enumerate(self.items):
-            px, py = coords[i]
-
-            item.x = px
-            item.y = py
-
-            # make sure item fits within the container bounds
-            if not self.container.within_bounds(item):
-                raise LayoutError("item doesn't fit in the container")
-
 
 class RandomLayout(BaseLayout):
     """
@@ -239,16 +205,7 @@ class RandomLayout(BaseLayout):
         """
         assert item.radius == self.radius, "item radius must be %d" % self.radius
 
-        # make sure there's enough space to fit all items
-        if self.container.capacity(Item.MIN_SIDE_SIZE) < len(self.items) + 1:
-            raise LayoutError("container too small to fit all items")
-
-        self.items.append(item)
-        coords = self.item_coordinates(len(self.items))
-        if len(coords) < len(self.items):
-            raise LayoutError("couldn't place all items in the container")
-
-        self._arrange(coords)
+        super(RandomLayout, self).add(item)
 
     def item_coordinates(self, num_items):
         center_coords = self.center_coords()
@@ -264,6 +221,9 @@ class RandomLayout(BaseLayout):
             # remove selected coordinate and all points now taken by
             # the item from the available coordinate set
             self.center_coords_cleanup(center_coords, point)
+
+        if len(coords) < num_items:
+            raise LayoutError("couldn't place all items in the container")
 
         return coords
 
@@ -291,17 +251,3 @@ class RandomLayout(BaseLayout):
                     coords.remove((x, y))
 
         return coords
-
-    def _arrange(self, coords):
-        """
-        Arrange items in layout or raise error if it's not possible.
-        """
-        for i, item in enumerate(self.items):
-            px, py = coords[i]
-
-            item.x = px
-            item.y = py
-
-            # make sure item fits within the container bounds
-            if not self.container.within_bounds(item):
-                raise LayoutError("item doesn't fit in the container")

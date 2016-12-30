@@ -8,9 +8,6 @@ from ..errors import LayoutError
 
 
 class TestHorizontalLineLayout(TestCase):
-    def setUp(self):
-        self.container = Container(width=3, height=3)
-
     def test_baseline_odd_height(self):
         l1 = HorizontalLineLayout(Container(width=1, height=3))
         self.assertEquals(l1.baseline, 1)
@@ -24,11 +21,28 @@ class TestHorizontalLineLayout(TestCase):
         self.assertEquals(l2.baseline, 2)
 
     def test_no_items(self):
-        layout = HorizontalLineLayout(self.container)
+        layout = HorizontalLineLayout(Container(width=3, height=3))
         self.assertEquals(layout.as_tuples(), [])
 
+    def test_item_coordinates(self):
+        l1 = HorizontalLineLayout(Container(width=3, height=3))
+        self.assertEquals(l1.item_coordinates(1), [(1, 1)])
+        with self.assertRaises(LayoutError):
+            l1.item_coordinates(2)
+
+        l2 = HorizontalLineLayout(Container(width=6, height=3))
+        self.assertEquals(l2.item_coordinates(1), [(3, 1)])
+        self.assertEquals(l2.item_coordinates(2), [(1, 1), (4, 1)])
+        with self.assertRaises(LayoutError):
+            l2.item_coordinates(3)
+
+        l3 = HorizontalLineLayout(Container(width=3, height=6))
+        self.assertEquals(l3.item_coordinates(1), [(1, 2)])
+        with self.assertRaises(LayoutError):
+            l3.item_coordinates(2)
+
     def test_one_item_valid_layout(self):
-        layout = HorizontalLineLayout(self.container)
+        layout = HorizontalLineLayout(Container(width=3, height=3))
         circle = Circle(radius=1)
         layout.add(circle)
 
@@ -37,7 +51,7 @@ class TestHorizontalLineLayout(TestCase):
 
     def test_one_item_invalid_layout(self):
         # circle radius too big to fit into the provided container
-        layout = HorizontalLineLayout(self.container)
+        layout = HorizontalLineLayout(Container(width=3, height=3))
         with self.assertRaises(LayoutError):
             layout.add(Circle(radius=2))
 
@@ -64,15 +78,30 @@ class TestHorizontalLineLayout(TestCase):
         with self.assertRaises(LayoutError):
             layout.add(Circle(radius=2))
 
+    def test_arrange(self):
+        layout = HorizontalLineLayout(Container(height=7, width=7))
+        layout.items.append(Circle(radius=1))
+        layout.items.append(Circle(radius=1))
+        layout.items.append(Circle(radius=1))
+        layout.arrange([(2, 2), (2, 5), (5, 2)])
+        self.assertEquals(layout.as_tuples(), [(2, 2, 1), (2, 5, 1), (5, 2, 1)])
+
+    def test_arrange_out_of_bounds(self):
+        layout = HorizontalLineLayout(Container(height=3, width=3))
+        layout.items.append(Circle(radius=1))
+        with self.assertRaises(LayoutError) as e:
+            layout.arrange([(0, 0)])
+        self.assertEquals(e.exception.message, "item doesn't fit in the container")
+
 
 class GridLayoutTests(TestCase):
-    def test_grid_intersections(self):
+    def test_item_coordinates(self):
         layout = GridLayout(Container(width=7, height=7))
-        self.assertEquals(layout.grid_intersections(1), [(3, 3)])
-        self.assertEquals(layout.grid_intersections(2), [(2, 2), (2, 5), (5, 2), (5, 5)])
-        self.assertEquals(layout.grid_intersections(3), [(2, 2), (2, 5), (5, 2), (5, 5)])
-        self.assertEquals(layout.grid_intersections(4), [(2, 2), (2, 5), (5, 2), (5, 5)])
-        self.assertEquals(layout.grid_intersections(5), [(2, 2), (2, 5), (5, 2), (5, 5)])
+        self.assertEquals(layout.item_coordinates(1), [(3, 3)])
+        self.assertEquals(layout.item_coordinates(2), [(2, 2), (2, 5), (5, 2), (5, 5)])
+        self.assertEquals(layout.item_coordinates(3), [(2, 2), (2, 5), (5, 2), (5, 5)])
+        self.assertEquals(layout.item_coordinates(4), [(2, 2), (2, 5), (5, 2), (5, 5)])
+        self.assertEquals(layout.item_coordinates(5), [(2, 2), (2, 5), (5, 2), (5, 5)])
             
     def test_grid_layout_add_items_overlap(self):
         layout = GridLayout(Container(width=7, height=7))
@@ -169,13 +198,17 @@ class RandomLayoutTests(TestCase):
         with patch("random.choice", side_effect=random_choice_mock_x):
             self.assertEquals(l1.item_coordinates(1), [(1, 1)])
             self.assertEquals(l1.item_coordinates(2), [(1, 1), (4, 1)])
-            self.assertEquals(l1.item_coordinates(3), [(1, 1), (4, 1)])
+            with self.assertRaises(LayoutError) as e:
+                l1.item_coordinates(3)
+            self.assertEquals(e.exception.message, "couldn't place all items in the container")
 
         l2 = RandomLayout(radius, Container(width=3, height=6))
         with patch("random.choice", side_effect=random_choice_mock_y):
             self.assertEquals(l2.item_coordinates(1), [(1, 1)])
             self.assertEquals(l2.item_coordinates(2), [(1, 1), (1, 4)])
-            self.assertEquals(l2.item_coordinates(3), [(1, 1), (1, 4)])
+            with self.assertRaises(LayoutError) as e:
+                l2.item_coordinates(3)
+            self.assertEquals(e.exception.message, "couldn't place all items in the container")
 
     def test_add_items(self):
         radius = 1
